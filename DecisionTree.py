@@ -13,8 +13,8 @@ def read_data(path):
     data = pd.read_csv(path, encoding='utf-8')
     return data
 
-def CalEntropy(Label_Col):
 
+def CalEntropy(Label_Col):
     '''
     :param Label_Col: 当前数据表格的标签列
     :return: 全体的信息熵
@@ -32,6 +32,7 @@ def CalEntropy(Label_Col):
         p_k = d[k] / num
         ent -= p_k * math.log(p_k, 2)
     return ent
+
 
 def CalInformationGain(data, dfeature, ent_method='entropy'):
     '''
@@ -61,8 +62,6 @@ def CalInformationGain(data, dfeature, ent_method='entropy'):
         return CalEntropy(data.iloc[:, -1]) - ent_new
 
 
-
-
 def CalIGRate(data, dfeature, ent_method='entropy'):
     '''
     :param data: same as CalInformationGain
@@ -88,6 +87,7 @@ def CalIGini(data):
     '''
     # to do
 
+
 def get_best_dividing_feature(data, method='entropy', using_ratio=False):
     """
     :param data: 划分使用到的数据
@@ -97,24 +97,49 @@ def get_best_dividing_feature(data, method='entropy', using_ratio=False):
     """
     best_feature = " "
     max_ent = - 100000
-    for feature in data.columns.values:
+    for feature in data.columns.values[:-1]:   # [:-1]把label信息排除在外
         ent_ = 0
         if using_ratio == True:
-            ent_ = CalIGRate(data, method)
+            ent_ = CalIGRate(data, feature, method)
         else:
-            ent_ = CalInformationGain(data, method)
-
+            ent_ = CalInformationGain(data, feature, method)
+            print(ent_)
         if ent_ > max_ent:
-            max_ent = ent
+            max_ent = ent_
             best_feature = feature
 
-    return best_feature
+    return best_feature, max_ent
 
 
 def CreateDecicisonTree(data, TreeType='ID3'):
     # return a tree in in a dir type
     assert TreeType in ['C4.5', 'ID3', 'CART']
     root = {}
+    if data.shape[0] == 0:
+        return
+
+    dfeature = " "
+
+    if TreeType == 'ID3':
+        dfeature = get_best_dividing_feature(data, method='entropy', using_ratio=False)
+
+    if TreeType == 'C4.5':
+        dfeature = get_best_dividing_feature(data, method='entropy', using_ratio=True)
+
+    if TreeType == 'CART':
+        dfeature = get_best_dividing_feature(data, method='gini')
+
+    # 找出数量最多的label(salient feature)备用
+    label = data[data.columns.values[-1]]
+    label = list(label)
+    salient_feature = max(label, key=label.count)
+
+    for df in list(set(label)):      #list(set(*)) is used to remove same units
+        
+
+
+
+
 
 
 
@@ -123,25 +148,27 @@ def MakeDecision(data, root):
     :param data: DataFrame
     :return: a list of decision
     """
-    #{'f1':{'f11':{'f21':{a}}, 'f12'"{b}, 'f13':{c}}}
+    # {'f1':{'f11':{'f21':{a}}, 'f12'"{b}, 'f13':{c}}}
     num = data.shape[0]
     ans_list = []
-    
+
     for i in range(num):
         while type(root) == 'dict':
             KEY = list(root.keys())[0]
             root = root[data[KEY][i]]
         ans_list.append(root)
-        
+
     return ans_list
 
 
 if __name__ == '__main__':
     # test data:
     data = read_data('./data1.csv')
+    data = data.iloc[:, [1, 2, 3, 4, 5, 6, 9]]
     print("column size:", data.iloc[:, -1].shape[0])
     ent = CalEntropy(data.iloc[:, -1])
     print("Entropy of data:", ent)
+
     for name in data.columns.values:
         eg = CalInformationGain(data, name)
         print("EGain divided by {}:".format(name), eg)
@@ -149,7 +176,7 @@ if __name__ == '__main__':
         print("EGainRatio divided by {}:".format(name), egr)
         print("-" * 50)
 
-
+    print(get_best_dividing_feature(data))
 
 
 
