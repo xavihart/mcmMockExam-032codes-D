@@ -5,7 +5,7 @@ import pandas as pd
 
 
 
-def read_file(file_path, read_method, og, splitby=",", max_lines=1e9):
+def read_file(file_path, read_method, og, splitby=",", max_lines=1e9, list=False):
     """
 
     :param file_path:
@@ -22,17 +22,30 @@ def read_file(file_path, read_method, og, splitby=",", max_lines=1e9):
             break
         lines = str(lines)
         l = lines.split(splitby)
-        l[-1] = l[-1][:-3]
-        for i in range(len(l)):
-            if i == 0:
-                continue
-            if "." not in l[i]:
-                l[i] = int(l[i])
-            else:
-                l[i] = float(l[i])
-
+        if og == "o":
+            l[-1] = l[-1][:-3]
+            for i in range(len(l)):
+                if i == 0:
+                    continue
+                if "." not in l[i]:
+                    l[i] = int(l[i])
+                else:
+                    l[i] = float(l[i])
+        else:
+            l[-1] = l[-1][:-3]
+            for i in range(len(l)):
+                if i == 0 or i == 1:
+                    continue
+                if "." not in l[i]:
+                    l[i] = int(l[i])
+                else:
+                    l[i] = float(l[i])
         s.append(l)
     f.close()
+    
+    if list == True:
+        return s
+
     data = pd.DataFrame(s)
 
     assert og in ["o", "g"]
@@ -92,28 +105,33 @@ def SDD(data):
 
 def SDE(data):
     len = data.shape[0]
+    data = data.iloc[0:len:10, :]
+    len = data.shape[0]
     v = len - 1
+    (lop, lap), (lod, lad) = MC(data)
     # pickup:
 
     varx = data['lon_pick'].var() * v
     vary = data['lat_pick'].var() * v
-    cor = data['lon_pick'].corr(data['lat_pick']) * v
+    cor = data['lon_pick'].cov(data['lat_pick']) * v
 
     theta_pick = np.arctan(((varx - vary) + np.sqrt((varx-vary)**2 + 4 * (cor ** 2))) * 1 / (2 * cor))
 
     cos = np.cos(theta_pick)
-
     sin = np.sin(theta_pick)
-    k1 = 0.0
-    k2 = 0.0
-    (lop, lap), (lod, lad) = MC(data)
-    for i in range(len):
-        k1 += (cos * (data['lon_pick'][i] - lop) - sin * (data['lat_pick'][i] - lap)) ** 2
-        k2 += (sin * (data['lon_pick'][i] - lop) - cos * (data['lat_pick'][i] - lap)) ** 2
 
-    #k1 = cos * cos * varx + sin * sin * vary - 2 * sin * cos * cor
-    #k2 = sin * sin * varx + cos * cos * vary - 2 * sin * cos * cor
+  #   k1 = 0.0
+  #   k2 = 0.0
+
+  #   for i in range(len):
+  #      k1 += (cos * (data['lon_pick'][i] - lop) - sin * (data['lat_pick'][i] - lap)) ** 2
+  #      k2 += (sin * (data['lon_pick'][i] - lop) - cos * (data['lat_pick'][i] - lap)) ** 2
+
+    k1 = cos * cos * varx + sin * sin * vary - 2 * sin * cos * cor
+    k2 = sin * sin * varx + cos * cos * vary - 2 * sin * cos * cor
+
     #print(v, varx, vary, theta_pick, cor)
+
     e1_pick = np.sqrt((k1) / (v - 1))
     e2_pick = np.sqrt((k2) / (v - 1))
 
@@ -121,19 +139,22 @@ def SDE(data):
 
     varx = data['lon_drop'].var() * v
     vary = data['lat_drop'].var() * v
-    cor = data['lon_drop'].corr(data['lat_drop']) * v
+    cor = data['lon_drop'].cov(data['lat_drop']) * v
 
     theta_drop = np.arctan(((varx - vary) + np.sqrt((varx-vary)**2 + 4 * (cor ** 2))) * 1 / (2 * cor))
 
     cos = np.cos(theta_drop)
     sin = np.sin(theta_drop)
-    #k1 = cos * cos * varx + sin * sin * vary - 2 * sin * cos * cor
-    #k2 = sin * sin * varx + cos * cos * vary - 2 * sin * cos * cor
-    k1 = 0.0
-    k2 = 0.0
-    for i in range(len):
-        k1 += (cos * (data['lon_drop'][i] - lod) - sin * (data['lat_drop'][i] - lad)) ** 2
-        k2 += (sin * (data['lon_drop'][i] - lod) - cos * (data['lat_drop'][i] - lad)) ** 2
+
+    k1 = cos * cos * varx + sin * sin * vary - 2 * sin * cos * cor
+    k2 = sin * sin * varx + cos * cos * vary - 2 * sin * cos * cor
+
+   # k1 = 0.0
+   # k2 = 0.0
+
+   # for i in range(len):
+   #     k1 += (cos * (data['lon_drop'][i] - lod) - sin * (data['lat_drop'][i] - lad)) ** 2
+   #     k2 += (sin * (data['lon_drop'][i] - lod) - cos * (data['lat_drop'][i] - lad)) ** 2
 
     e1_drop = np.sqrt((k1) / (v - 1))
     e2_drop = np.sqrt((k2) / (v - 1))
