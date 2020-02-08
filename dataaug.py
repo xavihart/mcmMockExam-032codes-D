@@ -4,18 +4,16 @@ import time
 t = time.time()
 
 
-data_g = read_file("./data/gps_13", "rb", "g")
-data_o = read_file("./data/order_13", "rb", "o")
+data_g = read_file("./data/gps_13", "rb", "g", max_lines=1000)
+data_o = read_file("./data/order_13", "rb", "o", max_lines=1000)
 
 data_o.loc[data_o.orderid == " ", 'driverid'] = "kkk"
 data_o['driverid'].astype("object")
 
 
-data_g.drop_duplicates(subset=["orderid"], inplace=True)
-
-
-data_g.sort_values(by=['orderid'], inplace=True)
-data_o.sort_values(by=['orderid'], inplace=True)
+data_g.drop_duplicates(subset=["orderid"])
+data_g.sort_values(by=['orderid'])
+data_o.sort_values(by=['orderid'])
 
 
 print("sorted successfully, time:", time.time() - t)
@@ -29,9 +27,8 @@ len2 = data_g.shape[0]
 
 while i < len1 and j < len2:
     ord = data_o.iloc[i, 0][2:]
-    ord_ = data_g.iloc[j, 1]
+    ord_ = data_g.iloc[i, 1]
     if ord == ord_:
-        print("???")
         data_o.iloc[i, 7] = data_g.iloc[j, 0]
         i, j = i + 1, j + 1
     if ord > ord_:

@@ -12,7 +12,6 @@ def random_change(x, max_):
     ex = np.random.randint(len(x))
     x[ex] = t
     #2
-
     i, j = np.random.randint(len(x)), np.random.randint(len(x))
     x[i], x[j] = x[j], x[i]
     return x
@@ -33,10 +32,7 @@ def cal_cost(Cost, x, status="r"):
 
 
 
-
-
-
-def SA(cost, init_T = 1000, end_T = 1, iter = 300):
+def SA(cost, init_T = 1000, end_T = 10, iter = 300):
     """
      use simulate annealing algorithm
     :param Cost: the cost matrix , its a numpy array
