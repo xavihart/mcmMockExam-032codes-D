@@ -6,10 +6,18 @@ import time
 # [path]:
 file_path = "./data/order_1"
 
+
 # 数据列表
 # status
-driver_number = 200
-number_ord = 10
+
+
+driver_number = 400
+number_ord = 2000
+dbscan = True
+time_step = 30
+
+
+
 driver_position = np.zeros((driver_number, 2)) # (lon, lat) 需要初始化！
 driver_position[:, 0] = 104.071
 driver_position[:, 1] = 30.173
@@ -72,15 +80,24 @@ def init_car_position(hisinfo=False):
             driver_position[i][0] = np.random.uniform(103.9, 104.2)
             driver_position[i][1] = np.random.uniform(30.55, 30.80)
 
-
-
+    else:
+        for i in range(int(driver_number * 0.9)):
+            driver_position[i][0] = np.random.uniform(104.02, 104.12)
+            driver_position[i][1] = np.random.uniform(30.62, 30.72)
+        for i in range(int(driver_number * 0.9), int(driver_number * 1)):
+            driver_position[i][0] = np.random.uniform(104.07, 104.14)
+            driver_position[i][1] = np.random.uniform(30.68, 30.73)
 
     return
 
 
 
+init_car_position(dbscan)
 
-req_index = generate_data_blocks(data, uniform=False,time_step=300,  block_number=5)
+
+
+
+req_index = generate_data_blocks(data, uniform=False, time_step=time_step,  block_number=5)
 #print("req index", req_index)
 
 
@@ -135,7 +152,10 @@ for i in range(len(req_index)):
 
         # update ava list:
 
-        availiable_index += index
+        availiable_index = list(availiable_index) + index
+        availiable_index = np.array(availiable_index)
+
+        driver_used[availiable_index] = 0
 
 
     # generate cost matrix
@@ -168,7 +188,7 @@ for i in range(len(req_index)):
         order_number = istart + i
         # cid for Car ID
 
-        cid = solution[i]
+        cid = availiable_index[solution[i]]
         driver_used[cid] = 1
         driver_order_list[cid].append((order_number, data[order_number][0], data[order_number][1] \
                                  , data[order_number][2], data[order_number][3], data[order_number][4] \
@@ -190,7 +210,7 @@ for i in range(len(req_index)):
 
 cw = 0.0
 st = 0.0
-
+ST = 0.0
 print("pending done!------")
 
 
@@ -198,11 +218,17 @@ for j in range(driver_number):
     # order_list[i]
     for i in range(len(driver_order_list[j])):
 
+        ST += driver_order_list[j][i][2] - driver_order_list[j][i][1]
+
         if i == 0:
             continue
         cw += driver_order_list[j][i][1] - driver_order_list[j][i - 1][2]
+
         st += dis_earth(driver_order_list[j][i][3], driver_order_list[j][i][4], \
                         driver_order_list[j][i][5], driver_order_list[j][i][6])
+
+
+
 cw /= driver_number
 st /= driver_number
 
@@ -212,10 +238,11 @@ st /= driver_number
 
 avg_nfree = np.array(Nfree_list).mean()
 
-f = open("./result/PendResult_ordernumber{}.txt".format(order_number), "w")
+f = open("./result/PendResult_ordernumber{}_{}_car_{}_{}s.txt".format(number_ord, dbscan, driver_number, time_step), "w")
 f.write("order_size:[{}], car_number:[{}]".format(data.shape[0], driver_number))
 f.write("File_path: {}\n".format(file_path))
 f.write("PT: averge pending time {}(s)\n".format(PT / data_size ))
 f.write("Nfree: average vacant cars for each orders: {}\n".format(avg_nfree))
 f.write("CW:avg car waiting time: {}(s)\n".format(cw))
 f.write("SD: avg (total distance) a driver takes to pick up passeangers: {}(km)\n".format(st))
+f.write("ST:{}\n".format(ST / 30))

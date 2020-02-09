@@ -1,0 +1,5 @@
+order_size:[50], car_number:[200]File_path: ./data/order_1
+PT: averge pending time 0.7819449472427368(s)
+Nfree: average vacant cars for each orders: 199.33333333333334
+CW:avg car waiting time: 382.215(s)
+SD: avg (total distance) a driver takes to pick up passeangers: 0.13415332958401013(km)
