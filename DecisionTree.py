@@ -111,12 +111,15 @@ def get_best_dividing_feature(data, method='entropy', using_ratio=False):
     return best_feature, max_ent
 
 
-def CreateDecicisonTree(data, TreeType='ID3'):
+def CreateDecicisonTree(root, data, TreeType='ID3'):
     # return a tree in in a dir type
     assert TreeType in ['C4.5', 'ID3', 'CART']
-    root = {}
+
     if data.shape[0] == 0:
         return
+
+
+    print(data)
 
     dfeature = " "
 
@@ -129,16 +132,37 @@ def CreateDecicisonTree(data, TreeType='ID3'):
     if TreeType == 'CART':
         dfeature = get_best_dividing_feature(data, method='gini')
 
+
+    dfeature = dfeature[0]
+    print(dfeature)
     # 找出数量最多的label(salient feature)备用
     label = data[data.columns.values[-1]]
     label = list(label)
     salient_feature = max(label, key=label.count)
 
-    for df in list(set(label)):      #list(set(*)) is used to remove same units
-        
+    #如果只有一种标签，直接create leaf
+    if len(set(label)) == 1:
+        root[dfeature] = label[0]
+        return
 
-
-
+    group = data.groupby(dfeature)
+    root[dfeature] = {}
+    root = root[dfeature]
+    for name, group_unit in group:
+        unit_label = group_unit[group_unit.columns.values[-1]]
+        unit_label = list(unit_label)
+        # 特判:如果对应特征值没有数据，取s_value作为leaf value
+        if group_unit.shape[0] == 0:
+            root[name] == salient_feature
+        # 特判：如果只有一个取值，直接标记leaf
+        if len(set(unit_label)) == 1:
+            root[name] = unit_label[0]
+            continue
+        else:
+            data_divided = data[data[dfeature] == name]
+            root[name] = {}
+            CreateDecicisonTree(root[name], data_divided, TreeType)
+    return root
 
 
 
@@ -149,34 +173,42 @@ def MakeDecision(data, root):
     :return: a list of decision
     """
     # {'f1':{'f11':{'f21':{a}}, 'f12'"{b}, 'f13':{c}}}
+
     num = data.shape[0]
     ans_list = []
 
     for i in range(num):
-        while type(root) == 'dict':
+        while isinstance(root, dict):
             KEY = list(root.keys())[0]
-            root = root[data[KEY][i]]
+            root = root[KEY][data[KEY][i]]
         ans_list.append(root)
+
 
     return ans_list
 
 
 if __name__ == '__main__':
     # test data:
+
     data = read_data('./data1.csv')
     data = data.iloc[:, [1, 2, 3, 4, 5, 6, 9]]
-    print("column size:", data.iloc[:, -1].shape[0])
+
+   # print(data)
+   # print("column size:", data.iloc[:, -1].shape[0])
     ent = CalEntropy(data.iloc[:, -1])
     print("Entropy of data:", ent)
 
-    for name in data.columns.values:
-        eg = CalInformationGain(data, name)
-        print("EGain divided by {}:".format(name), eg)
-        egr = CalIGRate(data, name)
-        print("EGainRatio divided by {}:".format(name), egr)
-        print("-" * 50)
+    root = {}
+    CreateDecicisonTree(root, data)
+    print(root)
+    print("-" * 20)
+    decision = MakeDecision(data, root)
+    print(decision)
 
-    print(get_best_dividing_feature(data))
+
+
+
+
 
 
 
